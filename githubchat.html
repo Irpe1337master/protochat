@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Platform Vote</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f; --surface: #13131a; --border: #2a2a3a;
+      --text: #e8e8f0; --muted: #555570;
+      --item: #ff6b35; --story: #00d4aa; --builder: #a78bfa; --accent: #f0e040;
+      --font-display: 'Syne', sans-serif; --font-mono: 'Space Mono', monospace;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font-mono); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem 1rem 1rem; }
+    header { text-align: center; margin-bottom: 2rem; }
+    header h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(2rem,6vw,3.5rem); letter-spacing: -0.02em; line-height: 1; background: linear-gradient(135deg, var(--item), var(--story), var(--builder)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    header p { margin-top: 0.5rem; color: var(--muted); font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; }
+
+    /* CONFIG */
+    .config-panel { width: 100%; max-width: 560px; margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+    .config-panel h2 { font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 1rem; }
+    .config-row { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
+    .config-row label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .config-row input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: var(--font-mono); font-size: 0.8rem; padding: 0.5rem 0.75rem; outline: none; width: 100%; transition: border-color 0.2s; }
+    .config-row input:focus { border-color: var(--accent); }
+    .config-row input::placeholder { color: var(--muted); }
+    .config-btn { background: var(--accent); color: var(--bg); border: none; border-radius: 6px; font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; padding: 0.6rem 1.25rem; cursor: pointer; transition: opacity 0.15s; width: 100%; margin-top: 0.25rem; }
+    .config-btn:hover { opacity: 0.85; }
+    .config-note { font-size: 0.7rem; color: var(--muted); margin-top: 0.75rem; line-height: 1.7; }
+    .config-note code { color: var(--story); }
+    .config-note a { color: var(--story); }
+
+    /* CHAT */
+    .chat-wrap { width: 100%; max-width: 560px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; height: 340px; }
+    .chat-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.7rem; color: var(--muted); }
+    .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 0.4rem; background: var(--muted); transition: background 0.3s; }
+    .status-dot.ok  { background: var(--story); box-shadow: 0 0 6px var(--story); }
+    .status-dot.err { background: var(--item);  box-shadow: 0 0 6px var(--item); }
+    .chat-log { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; scroll-behavior: smooth; }
+    .chat-log::-webkit-scrollbar { width: 4px; }
+    .chat-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .msg { display: flex; align-items: baseline; gap: 0.5rem; animation: fadeSlide 0.25s ease both; }
+    @keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .msg .who { font-size: 0.7rem; font-weight: 700; min-width: 70px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0; }
+    .msg .text { font-size: 0.85rem; color: var(--text); line-height: 1.5; word-break: break-word; }
+    .msg.system .who  { color: var(--accent); }
+    .msg.system .text { color: var(--muted); font-size: 0.75rem; font-style: italic; }
+    .chat-input-row { border-top: 1px solid var(--border); display: flex; align-items: center; }
+    .name-input { background: transparent; border: none; border-right: 1px solid var(--border); color: var(--muted); font-family: var(--font-mono); font-size: 0.75rem; padding: 0.75rem; width: 90px; outline: none; text-transform: uppercase; letter-spacing: 0.08em; }
+    .name-input::placeholder { color: var(--border); }
+    .msg-input { flex: 1; background: transparent; border: none; color: var(--text); font-family: var(--font-mono); font-size: 0.85rem; padding: 0.75rem 1rem; outline: none; }
+    .msg-input::placeholder { color: var(--muted); }
+    .msg-input:disabled, .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .send-btn { background: none; border: none; color: var(--muted); padding: 0.75rem 1rem; cursor: pointer; font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; transition: color 0.15s; }
+    .send-btn:hover:not(:disabled) { color: var(--accent); }
+
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>GAME CHAT</h1>
+  <p>real-time · powered by github</p>
+</header>
+
+
+<div class="config-panel" id="configPanel">
+  <h2>⚙ GitHub Setup</h2>
+  <div class="config-row">
+    <label>Personal Access Token</label>
+    <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
+  </div>
+  <div class="config-row">
+    <label>Data Repo &nbsp;(owner/repo-name)</label>
+    <input type="text" id="cfgRepo" placeholder="yourname/game-data" />
+  </div>
+  <button class="config-btn" id="cfgConnect">Connect &amp; Start</button>
+  <p class="config-note">
+    1. Create a <strong>separate private repo</strong> (e.g. <code>game-data</code>) — this keeps messages out of your public game repo.<br>
+    2. Go to <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a>, generate a <strong>Classic token</strong> with the <code>repo</code> scope.<br>
+    3. Paste both above and hit Connect. The token lives only in your browser session — it is never stored.
+  </p>
+</div>
+
+<!-- ── CONFIG PANEL ── -->
+<div class="chat-wrap">
+  <div class="chat-toolbar">
+    <span><span class="status-dot" id="statusDot"></span><span id="statusText">not connected</span></span>
+    <span id="pollTimer"></span>
+  </div>
+  <div class="chat-log" id="chatLog"></div>
+  <div class="chat-input-row">
+    <input class="name-input" id="nameInput" type="text" maxlength="12" placeholder="name" />
+    <input class="msg-input"  id="msgInput"  type="text" maxlength="80" placeholder="connect first…" disabled />
+    <button class="send-btn"  id="sendBtn" disabled>Send ↵</button>
+  </div>
+</div>
+
+<script>
+  // ── CONFIG ──────────────────────────────────────────────
+  const FILE_PATH = 'messages.json';
+  const POLL_MS   = 5000;
+
+  let TOKEN = '', REPO = '';
+  let fileSha = null, lastMsgCount = 0, sending = false;
+  let countdown = POLL_MS / 1000;
+
+  // ── ELEMENTS ─────────────────────────────────────────────
+  const chatLog     = document.getElementById('chatLog');
+  const nameInput   = document.getElementById('nameInput');
+  const msgInput    = document.getElementById('msgInput');
+  const sendBtn     = document.getElementById('sendBtn');
+  const statusDot   = document.getElementById('statusDot');
+  const statusText  = document.getElementById('statusText');
+  const pollTimerEl = document.getElementById('pollTimer');
+  const configPanel = document.getElementById('configPanel');
+
+  // ── CONNECT ───────────────────────────────────────────────
+  document.getElementById('cfgConnect').addEventListener('click', async () => {
+    TOKEN = document.getElementById('cfgToken').value.trim();
+    REPO  = document.getElementById('cfgRepo').value.trim();
+    if (!TOKEN || !REPO) { alert('Please fill in both fields.'); return; }
+    setStatus('connecting…', '');
+    const ok = await initFile();
+    if (ok) {
+      configPanel.style.display = 'none';
+      msgInput.disabled = false;
+      msgInput.placeholder = 'type item / story / builder — or just chat…';
+      sendBtn.disabled = false;
+      msgInput.focus();
+      startPolling();
+    }
+  });
+
+  // ── GITHUB HELPERS ────────────────────────────────────────
+  function apiHeaders() {
+    return {
+      'Authorization': `Bearer ${TOKEN}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json'
+    };
+  }
+
+  function b64encode(str) {
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+  function b64decode(str) {
+    return decodeURIComponent(escape(atob(str.replace(/\n/g,''))));
+  }
+
+  async function getFile() {
+    const res = await fetch(
+      `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}?t=${Date.now()}`,
+      { headers: apiHeaders() }
+    );
+    return { res, status: res.status };
+  }
+
+  async function initFile() {
+    try {
+      const { res, status } = await getFile();
+      if (status === 404) {
+        // create the file with an empty array
+        const cr = await fetch(
+          `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
+          { method: 'PUT', headers: apiHeaders(),
+            body: JSON.stringify({ message: 'init chat', content: b64encode('[]') }) }
+        );
+        if (!cr.ok) throw new Error(`Create failed: ${cr.status}`);
+        fileSha = (await cr.json()).content.sha;
+        setStatus('connected', 'ok');
+        addLocalMsg('system', 'Chat started! Share this page — everyone needs the token to connect.');
+        return true;
+      }
+      if (!res.ok) throw new Error(`GitHub ${status}`);
+      const j = await res.json();
+      fileSha = j.sha;
+      const msgs = JSON.parse(b64decode(j.content));
+      renderMessages(msgs, true);
+      setStatus('connected', 'ok');
+      return true;
+    } catch(e) {
+      setStatus('error — check token & repo', 'err');
+      addLocalMsg('system', '⚠ ' + e.message);
+      return false;
+    }
+  }
+
+  async function fetchMessages() {
+    try {
+      const { res, status } = await getFile();
+      if (!res.ok) throw new Error(status);
+      const j = await res.json();
+      fileSha = j.sha;
+      renderMessages(JSON.parse(b64decode(j.content)), false);
+      setStatus('connected', 'ok');
+    } catch(e) {
+      setStatus('sync error', 'err');
+    }
+  }
+
+  async function pushMessage(msg) {
+    try {
+      // re-fetch to get latest SHA + content (prevents conflicts)
+      const { res } = await getFile();
+      if (!res.ok) throw new Error(res.status);
+      const j = await res.json();
+      fileSha = j.sha;
+      let msgs = JSON.parse(b64decode(j.content));
+      msgs.push(msg);
+      if (msgs.length > 200) msgs = msgs.slice(-200);
+
+      const pr = await fetch(
+        `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`,
+        { method: 'PUT', headers: apiHeaders(),
+          body: JSON.stringify({ message: 'chat', content: b64encode(JSON.stringify(msgs)), sha: fileSha }) }
+      );
+      if (!pr.ok) throw new Error(await pr.text());
+      fileSha = (await pr.json()).content.sha;
+      renderMessages(msgs, false);
+      setStatus('connected', 'ok');
+      return true;
+    } catch(e) {
+      setStatus('send failed', 'err');
+      addLocalMsg('system', '⚠ Send failed — try again.');
+      return false;
+    }
+  }
+
+  function renderMessages(msgs, initial) {
+    if (!initial && msgs.length === lastMsgCount) return;
+    if (initial) chatLog.innerHTML = '';
+    const newMsgs = initial ? msgs : msgs.slice(lastMsgCount);
+    lastMsgCount = msgs.length;
+    newMsgs.forEach(m => addChatRow(m.who, m.text));
+  }
+
+  function addChatRow(who, text) {
+    const div = document.createElement('div');
+    div.className = 'msg';
+    div.innerHTML = `<span class="who">${esc(who)}</span><span class="text">${esc(text)}</span>`;
+    chatLog.appendChild(div);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function addLocalMsg(who, text) {
+    const div = document.createElement('div');
+    div.className = 'msg system';
+    div.innerHTML = `<span class="who">${esc(who)}</span><span class="text">${esc(text)}</span>`;
+    chatLog.appendChild(div);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function setStatus(text, cls) {
+    statusText.textContent = text;
+    statusDot.className = 'status-dot' + (cls ? ' ' + cls : '');
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── POLLING ───────────────────────────────────────────────
+  function startPolling() {
+    setInterval(() => {
+      countdown--;
+      pollTimerEl.textContent = `sync in ${countdown}s`;
+      if (countdown <= 0) {
+        countdown = POLL_MS / 1000;
+        fetchMessages();
+      }
+    }, 1000);
+  }
+
+  // ── SEND ─────────────────────────────────────────────────
+  async function send() {
+    if (sending) return;
+    const text = msgInput.value.trim();
+    if (!text) return;
+    const who = nameInput.value.trim() || 'anon';
+    sending = true;
+    sendBtn.disabled = true;
+    msgInput.disabled = true;
+    setStatus('sending…', '');
+    const ok = await pushMessage({ who, text, ts: Date.now() });
+    sending = false;
+    sendBtn.disabled = false;
+    msgInput.disabled = false;
+    if (ok) { msgInput.value = ''; countdown = POLL_MS / 1000; }
+    msgInput.focus();
+  }
+
+  sendBtn.addEventListener('click', send);
+  msgInput.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+</script>
+</body>
+</html>
